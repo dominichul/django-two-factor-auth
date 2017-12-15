@@ -7,3 +7,5 @@ example/settings_private.py
 /.tox/
 /htmlcov/
 /docs/_build/
+.DS_Store
+.idea

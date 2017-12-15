@@ -91,6 +91,7 @@ class IdempotentSessionWizardView(SessionWizardView):
         Check if the current step is still available. It might not be if
         conditions have changed.
         """
+
         if self.steps.current not in self.steps.all:
             logger.warning("Current step '%s' is no longer valid, returning "
                            "to last valid step in the wizard.",

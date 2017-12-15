@@ -31,7 +31,7 @@ from two_factor.utils import totp_digits
 
 from ..forms import (
     AuthenticationTokenForm, BackupTokenForm, DeviceValidationForm, MethodForm,
-    PhoneNumberForm, PhoneNumberMethodForm, TOTPDeviceForm, YubiKeyDeviceForm,
+    PhoneNumberCallForm, PhoneNumberSMSForm, PhoneNumberMethodForm, TOTPDeviceForm, YubiKeyDeviceForm,
 )
 from ..models import PhoneDevice, get_available_phone_methods
 from ..utils import backup_phones, default_device, get_otpauth_url
@@ -214,6 +214,7 @@ class SetupView(IdempotentSessionWizardView):
     is asked to provide a generated token. For call and sms methods, the user
     provides the phone number which is then validated in the final step.
     """
+
     success_url = 'two_factor:setup_complete'
     qrcode_url = 'two_factor:qr'
     template_name = 'two_factor/core/setup.html'
@@ -223,8 +224,8 @@ class SetupView(IdempotentSessionWizardView):
         ('welcome', Form),
         ('method', MethodForm),
         ('generator', TOTPDeviceForm),
-        ('sms', PhoneNumberForm),
-        ('call', PhoneNumberForm),
+        ('sms', PhoneNumberSMSForm),
+        ('call', PhoneNumberCallForm),
         ('validation', DeviceValidationForm),
         ('yubikey', YubiKeyDeviceForm),
     )
@@ -295,6 +296,8 @@ class SetupView(IdempotentSessionWizardView):
         # PhoneNumberForm / YubiKeyDeviceForm
         elif self.get_method() in ('call', 'sms', 'yubikey'):
             device = self.get_device()
+            import pdb;
+            pdb.set_trace()
             device.save()
 
         else:
@@ -337,6 +340,10 @@ class SetupView(IdempotentSessionWizardView):
             kwargs['number'] = self.storage.validated_step_data\
                 .get(method, {}).get('number')
             return PhoneDevice(key=self.get_key(method), **kwargs)
+            import pdb;
+            pdb.set_trace()
+            kwargs['extension'] = self.storage.validated_step_data\
+                .get(method, {}).get('extension')
 
         if method == 'yubikey':
             kwargs['public_id'] = self.storage.validated_step_data\
@@ -434,9 +441,22 @@ class PhoneSetupView(IdempotentSessionWizardView):
     success_url = settings.LOGIN_REDIRECT_URL
     form_list = (
         ('setup', PhoneNumberMethodForm),
+        ('call', PhoneNumberCallForm),
+        ('sms', PhoneNumberSMSForm),
         ('validation', DeviceValidationForm),
     )
+
+    condition_dict = {
+        'call': lambda self: self.get_method() == 'call',
+        'sms': lambda self: self.get_method() == 'sms',
+        'validation': lambda self: self.get_method() in ('sms', 'call')
+    }
+
     key_name = 'key'
+
+    def get_method(self):
+        method_data = self.storage.validated_step_data.get('setup', {})
+        return method_data.get('method', None)
 
     def get(self, request, *args, **kwargs):
         """
