@@ -33,7 +33,7 @@ from ..forms import (
     AuthenticationTokenForm, BackupTokenForm, DeviceValidationForm, MethodForm,
     PhoneNumberCallForm, PhoneNumberSMSForm, PhoneNumberMethodForm, TOTPDeviceForm, YubiKeyDeviceForm,
 )
-from ..models import PhoneDevice, get_available_phone_methods
+from ..models import PhoneDevice, get_available_phone_methods, has_extensions_enabled
 from ..utils import backup_phones, default_device, get_otpauth_url
 from .utils import IdempotentSessionWizardView, class_view_decorator
 
@@ -296,8 +296,6 @@ class SetupView(IdempotentSessionWizardView):
         # PhoneNumberForm / YubiKeyDeviceForm
         elif self.get_method() in ('call', 'sms', 'yubikey'):
             device = self.get_device()
-            import pdb;
-            pdb.set_trace()
             device.save()
 
         else:
@@ -339,11 +337,10 @@ class SetupView(IdempotentSessionWizardView):
             kwargs['method'] = method
             kwargs['number'] = self.storage.validated_step_data\
                 .get(method, {}).get('number')
+            if has_extensions_enabled() and method == 'call':
+                kwargs['extension'] = self.storage.validated_step_data\
+                    .get(method, {}).get('extension')
             return PhoneDevice(key=self.get_key(method), **kwargs)
-            import pdb;
-            pdb.set_trace()
-            kwargs['extension'] = self.storage.validated_step_data\
-                .get(method, {}).get('extension')
 
         if method == 'yubikey':
             kwargs['public_id'] = self.storage.validated_step_data\
@@ -449,7 +446,6 @@ class PhoneSetupView(IdempotentSessionWizardView):
     condition_dict = {
         'call': lambda self: self.get_method() == 'call',
         'sms': lambda self: self.get_method() == 'sms',
-        'validation': lambda self: self.get_method() in ('sms', 'call')
     }
 
     key_name = 'key'
@@ -494,8 +490,16 @@ class PhoneSetupView(IdempotentSessionWizardView):
         """
         Uses the data from the setup step and generated key to recreate device.
         """
+        method = self.get_method()
         kwargs = kwargs or {}
-        kwargs.update(self.storage.validated_step_data.get('setup', {}))
+
+        kwargs['method'] = method
+        kwargs['number'] = self.storage.validated_step_data\
+            .get(method, {}).get('number')
+        if has_extensions_enabled() and method == 'call':
+            kwargs['extension'] = self.storage.validated_step_data\
+                .get(method, {}).get('extension')
+
         return PhoneDevice(key=self.get_key(), **kwargs)
 
     def get_key(self):

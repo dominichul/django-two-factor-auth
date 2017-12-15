@@ -53,13 +53,13 @@ class PhoneNumberCallForm(ModelForm):
     def __init__(self, **kwargs):
         super(PhoneNumberCallForm, self).__init__(**kwargs)
         if has_extensions_enabled():
-            self.extension = forms.CharField(required=False,
-                                                       label=_("Extension"),
-                                                       help_text=("*Leave blank if none"),
-                                                       validators=[validate_extension],
-                                                       widget=forms.TextInput(attrs={'placeholder': 'ext',
-                                                                                     'style': "width: 60px",
-                                                                                     'maxlength': 4}))
+            self.fields['extension'] = forms.CharField(required=False,
+                                             label=_("Extension"),
+                                             help_text="*Leave blank if none",
+                                             validators=[validate_extension],
+                                             widget=forms.TextInput(attrs={'placeholder': 'ext',
+                                                                           'style': "width: 60px",
+                                                                           'maxlength': 4}))
 
 
 class PhoneNumberSMSForm(ModelForm):

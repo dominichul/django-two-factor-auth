@@ -80,7 +80,7 @@ class PhoneDevice(Device):
                               verbose_name=_('method'))
 
     def __repr__(self):
-        return '<PhoneDevice(number={!r}, method={!r}>'.format(
+        return '<PhoneDevice(number={!r}, extension={!r} ,method={!r}>'.format(
             self.number,
             self.extension,
             self.method,

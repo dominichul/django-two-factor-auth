@@ -55,5 +55,7 @@ def device_action(device):
     if device.method == 'sms':
         return ugettext('Send text message to %s') % number
     elif device.method == 'call':
+        if device.extension:
+            return ugettext('Call number %s ext. %s') % (number, device.extension)
         return ugettext('Call number %s') % number
     raise NotImplementedError('Unknown method: %s' % device.method)
