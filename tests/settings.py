@@ -77,4 +77,6 @@ TEMPLATES = [
 
 TWO_FACTOR_PATCH_ADMIN = False
 
+TWO_FACTOR_EXTENSION = True
+
 AUTH_USER_MODEL = os.environ.get('AUTH_USER_MODEL', 'auth.User')
