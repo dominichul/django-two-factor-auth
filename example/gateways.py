@@ -8,7 +8,7 @@ from two_factor.templatetags.two_factor import mask_phone_number
 class Messages(object):
     @classmethod
     def make_call(cls, device, token):
-        cls._add_message(ugettext('Fake call to %(number)s: '
+        cls._add_message(ugettext('Fake call to %(number)s ext. %(extension)s: '
                                   '"Your token is: %(token)s"'),
                          device, token)
 
@@ -21,5 +21,6 @@ class Messages(object):
     @classmethod
     def _add_message(cls, message, device, token):
         message = message % {'number': mask_phone_number(device.number),
+                             'extension': device.extension,
                              'token': token}
         messages.add_message(get_current_request(), messages.INFO, message)

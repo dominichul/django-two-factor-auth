@@ -156,6 +156,22 @@ class SetupTest(UserMixin, TestCase):
         self.assertEqual(phones[0].name, 'default')
         self.assertEqual(phones[0].number.as_e164, '+31101234567')
         self.assertEqual(phones[0].method, 'call')
+    """
+    @mock.path('two_factor.gateways.fake.Fake')
+    @override_settings(TWO_FACTOR_CALL_GATEWAY='two_factor.gateways.fake.Fake')
+    def test_setup_phone_ext_call(self, fake):
+        response = self._post(data={'setup_view-current_step': 'welcome'})
+        self.assertContains(response, 'Method:')
+
+        response = self._post(data={'setup_view-current_step': 'method',
+                                    'method-method': 'call'})
+        self.assertContains(response, 'Number:')
+
+        response = self._post(data={'setup_view-current-step': 'call',
+                                    'call-number': '+31101234567',
+                                    'call-extension': '0325g'})
+        self.Assert
+    """
 
     @mock.patch('two_factor.gateways.fake.Fake')
     @override_settings(TWO_FACTOR_SMS_GATEWAY='two_factor.gateways.fake.Fake')

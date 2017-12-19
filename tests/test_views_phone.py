@@ -78,7 +78,7 @@ class PhoneSetupTest(UserMixin, TestCase):
     @mock.patch('two_factor.gateways.fake.Fake')
     def test_number_validation(self, fake):
         self._post({'phone_setup_view-current_step': 'setup',
-                     'setup-method': 'sms'})
+                    'setup-method': 'sms'})
         response = self._post({'phone_setup_view-current_step': 'sms',
                                'sms-number': '123'})
         self.assertEqual(
