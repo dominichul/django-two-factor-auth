@@ -76,6 +76,43 @@ class PhoneSetupTest(UserMixin, TestCase):
         self.assertEqual(phones[0].key, device.key)
 
     @mock.patch('two_factor.gateways.fake.Fake')
+    @override_settings(TWO_FACTOR_EXTENSION=False)
+    def test_setup_phone_ext_disabled(self, fake):
+        self._post(data={'phone_setup_view-current_step': 'setup',
+                         'setup-method': 'call'})
+
+        response = self._post(data={'phone_setup_view-current_step': 'call',
+                                    'call-number': '+31101234567',
+                                    'call-extension': '0400'})
+
+        self.assertContains(response, 'We\'ve sent a token to your phone')
+
+        # assert that the token was send to the gateway
+        self.assertEqual(
+            fake.return_value.method_calls,
+            [mock.call.make_call(device=mock.ANY, token=mock.ANY)]
+        )
+
+        response = self._post(data={'phone_setup_view-current_step': 'validation',
+                                    'validation-token': '666'})
+        self.assertEqual(response.context_data['wizard']['form'].errors,
+                         {'token': ['Entered token is not valid.']})
+
+        # submitting correct token should finish the setup
+        token = fake.return_value.make_call.call_args[1]['token']
+        response = self._post(data={'phone_setup_view-current_step': 'validation',
+                                    'validation-token': token})
+        self.assertRedirects(response, resolve_url(settings.LOGIN_REDIRECT_URL))
+
+        phones = self.user.phonedevice_set.all()
+        self.assertEqual(len(phones), 1)
+        self.assertEqual(phones[0].name, 'backup')
+        self.assertEqual(phones[0].number.as_e164, '+31101234567')
+        # extension should not be populated
+        self.assertFalse(phones[0].extension)
+        self.assertEqual(phones[0].method, 'call')
+
+    @mock.patch('two_factor.gateways.fake.Fake')
     def test_number_validation(self, fake):
         self._post({'phone_setup_view-current_step': 'setup',
                     'setup-method': 'sms'})

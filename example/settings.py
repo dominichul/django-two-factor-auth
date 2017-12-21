@@ -94,11 +94,8 @@ LOGGING = {
 }
 
 TWO_FACTOR_EXTENSION = True
-TWO_FACTOR_CALL_GATEWAY = 'two_factor.gateways.twilio.gateway.Twilio'
-TWO_FACTOR_SMS_GATEWAY = 'two_factor.gateways.twilio.gateway.Twilio'
-TWILIO_ACCOUNT_SID = ''
-TWILIO_AUTH_TOKEN = ''
-TWILIO_CALLER_ID = '+15873234332'
+TWO_FACTOR_CALL_GATEWAY = 'example.gateways.Messages'
+TWO_FACTOR_SMS_GATEWAY = 'example.gateways.Messages'
 
 PHONENUMBER_DEFAULT_REGION = 'NL'
 

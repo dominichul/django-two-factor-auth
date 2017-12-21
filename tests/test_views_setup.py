@@ -156,8 +156,8 @@ class SetupTest(UserMixin, TestCase):
         self.assertEqual(phones[0].name, 'default')
         self.assertEqual(phones[0].number.as_e164, '+31101234567')
         self.assertEqual(phones[0].method, 'call')
-    """
-    @mock.path('two_factor.gateways.fake.Fake')
+
+    @mock.patch('two_factor.gateways.fake.Fake')
     @override_settings(TWO_FACTOR_CALL_GATEWAY='two_factor.gateways.fake.Fake')
     def test_setup_phone_ext_call(self, fake):
         response = self._post(data={'setup_view-current_step': 'welcome'})
@@ -167,11 +167,82 @@ class SetupTest(UserMixin, TestCase):
                                     'method-method': 'call'})
         self.assertContains(response, 'Number:')
 
-        response = self._post(data={'setup_view-current-step': 'call',
+        response = self._post(data={'setup_view-current_step': 'call',
                                     'call-number': '+31101234567',
-                                    'call-extension': '0325g'})
-        self.Assert
-    """
+                                    'call-extension': '044j'})
+
+        self.assertEqual(response.context_data['wizard']['form'].errors,
+                         {'extension': ['Extension must be left blank or consist of 1-4 numeric values']})
+
+        response = self._post(data={'setup_view-current_step': 'call',
+                                    'call-number': '+31101234567',
+                                    'call-extension': '0435'})
+        self.assertContains(response, 'Token:')
+        self.assertContains(response, 'We are calling your phone right now')
+
+        # assert that the token was send to the gateway
+        self.assertEqual(
+            fake.return_value.method_calls,
+            [mock.call.make_call(device=mock.ANY, token=mock.ANY)]
+        )
+
+        response = self._post(data={'setup_view-current_step': 'validation',
+                                    'validation-token': '666'})
+        self.assertEqual(response.context_data['wizard']['form'].errors,
+                         {'token': ['Entered token is not valid.']})
+
+        # submitting correct token should finish the setup
+        token = fake.return_value.make_call.call_args[1]['token']
+        response = self._post(data={'setup_view-current_step': 'validation',
+                                    'validation-token': token})
+        self.assertRedirects(response, reverse('two_factor:setup_complete'))
+
+        phones = self.user.phonedevice_set.all()
+        self.assertEqual(len(phones), 1)
+        self.assertEqual(phones[0].name, 'default')
+        self.assertEqual(phones[0].number.as_e164, '+31101234567')
+        self.assertEqual(phones[0].extension, '0435')
+        self.assertEqual(phones[0].method, 'call')
+
+    @mock.patch('two_factor.gateways.fake.Fake')
+    @override_settings(TWO_FACTOR_CALL_GATEWAY='two_factor.gateways.fake.Fake',
+                       TWO_FACTOR_EXTENSION=False)
+    def test_setup_phone_ext_disabled(self, fake):
+        self._post(data={'setup_view-current_step': 'welcome'})
+
+        self._post(data={'setup_view-current_step': 'method',
+                         'method-method': 'call'})
+
+        response = self._post(data={'setup_view-current_step': 'call',
+                                    'call-number': '+31101234567',
+                                    'call-extension': '3464'})
+        self.assertContains(response, 'Token:')
+        self.assertContains(response, 'We are calling your phone right now')
+
+        # assert that the token was send to the gateway
+        self.assertEqual(
+            fake.return_value.method_calls,
+            [mock.call.make_call(device=mock.ANY, token=mock.ANY)]
+        )
+
+        response = self._post(data={'setup_view-current_step': 'validation',
+                                    'validation-token': '666'})
+        self.assertEqual(response.context_data['wizard']['form'].errors,
+                         {'token': ['Entered token is not valid.']})
+
+        # submitting correct token should finish the setup
+        token = fake.return_value.make_call.call_args[1]['token']
+        response = self._post(data={'setup_view-current_step': 'validation',
+                                    'validation-token': token})
+        self.assertRedirects(response, reverse('two_factor:setup_complete'))
+
+        phones = self.user.phonedevice_set.all()
+        self.assertEqual(len(phones), 1)
+        self.assertEqual(phones[0].name, 'default')
+        self.assertEqual(phones[0].number.as_e164, '+31101234567')
+        # extension should not be populated
+        self.assertFalse(phones[0].extension)
+        self.assertEqual(phones[0].method, 'call')
 
     @mock.patch('two_factor.gateways.fake.Fake')
     @override_settings(TWO_FACTOR_SMS_GATEWAY='two_factor.gateways.fake.Fake')
