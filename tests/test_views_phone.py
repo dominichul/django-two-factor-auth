@@ -35,7 +35,7 @@ class PhoneSetupTest(UserMixin, TestCase):
 
     def test_form(self):
         response = self.client.get(reverse('two_factor:phone_create'))
-        self.assertContains(response, 'Number:')
+        self.assertContains(response, 'Method:')
 
     def _post(self, data=None):
         return self.client.post(reverse('two_factor:phone_create'), data=data)
@@ -43,17 +43,21 @@ class PhoneSetupTest(UserMixin, TestCase):
     @mock.patch('two_factor.gateways.fake.Fake')
     def test_setup(self, fake):
         response = self._post({'phone_setup_view-current_step': 'setup',
-                               'setup-number': '',
                                'setup-method': ''})
         self.assertEqual(response.context_data['wizard']['form'].errors,
-                         {'method': ['This field is required.'],
-                          'number': ['This field is required.']})
+                         {'method': ['This field is required.']})
 
         response = self._post({'phone_setup_view-current_step': 'setup',
-                               'setup-number': '+31101234567',
                                'setup-method': 'call'})
+
+        self.assertContains(response, 'called on')
+
+        response = self._post({'phone_setup_view-current_step': 'call',
+                               'call-number': '+31101234567',
+                               'call-extension': ''})
         self.assertContains(response, 'We\'ve sent a token to your phone')
         device = response.context_data['wizard']['form'].device
+
         fake.return_value.make_call.assert_called_with(
             device=device, token='%06d' % totp(device.bin_key))
 
@@ -72,10 +76,48 @@ class PhoneSetupTest(UserMixin, TestCase):
         self.assertEqual(phones[0].key, device.key)
 
     @mock.patch('two_factor.gateways.fake.Fake')
+    @override_settings(TWO_FACTOR_EXTENSION=False)
+    def test_setup_phone_ext_disabled(self, fake):
+        self._post(data={'phone_setup_view-current_step': 'setup',
+                         'setup-method': 'call'})
+
+        response = self._post(data={'phone_setup_view-current_step': 'call',
+                                    'call-number': '+31101234567',
+                                    'call-extension': '0400'})
+
+        self.assertContains(response, 'We\'ve sent a token to your phone')
+
+        # assert that the token was send to the gateway
+        self.assertEqual(
+            fake.return_value.method_calls,
+            [mock.call.make_call(device=mock.ANY, token=mock.ANY)]
+        )
+
+        response = self._post(data={'phone_setup_view-current_step': 'validation',
+                                    'validation-token': '666'})
+        self.assertEqual(response.context_data['wizard']['form'].errors,
+                         {'token': ['Entered token is not valid.']})
+
+        # submitting correct token should finish the setup
+        token = fake.return_value.make_call.call_args[1]['token']
+        response = self._post(data={'phone_setup_view-current_step': 'validation',
+                                    'validation-token': token})
+        self.assertRedirects(response, resolve_url(settings.LOGIN_REDIRECT_URL))
+
+        phones = self.user.phonedevice_set.all()
+        self.assertEqual(len(phones), 1)
+        self.assertEqual(phones[0].name, 'backup')
+        self.assertEqual(phones[0].number.as_e164, '+31101234567')
+        # extension should not be populated
+        self.assertFalse(phones[0].extension)
+        self.assertEqual(phones[0].method, 'call')
+
+    @mock.patch('two_factor.gateways.fake.Fake')
     def test_number_validation(self, fake):
-        response = self._post({'phone_setup_view-current_step': 'setup',
-                               'setup-number': '123',
-                               'setup-method': 'call'})
+        self._post({'phone_setup_view-current_step': 'setup',
+                    'setup-method': 'sms'})
+        response = self._post({'phone_setup_view-current_step': 'sms',
+                               'sms-number': '123'})
         self.assertEqual(
             response.context_data['wizard']['form'].errors,
             {'number': [six.text_type(validate_international_phonenumber.message)]})

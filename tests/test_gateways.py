@@ -58,25 +58,25 @@ class TwilioGatewayTest(TestCase):
         client.assert_called_with('SID', 'TOKEN')
 
         for code in ['654321', '054321', '87654321', '07654321']:
-            twilio.make_call(device=Mock(number=PhoneNumber.from_string('+123')), token=code)
+            twilio.make_call(device=Mock(number=PhoneNumber.from_string('+123'), extension=None), token=code)
             client.return_value.calls.create.assert_called_with(
                 from_='+456', to='+123', method='GET', timeout=15,
                 url='http://testserver/twilio/inbound/two_factor/%s/?locale=en-us' % code)
 
-            twilio.send_sms(device=Mock(number=PhoneNumber.from_string('+123')), token=code)
+            twilio.send_sms(device=Mock(number=PhoneNumber.from_string('+123'), extension=None), token=code)
             client.return_value.messages.create.assert_called_with(
                 to='+123', body='Your authentication token is %s' % code, from_='+456')
 
             client.return_value.calls.create.reset_mock()
             with translation.override('en-gb'):
-                twilio.make_call(device=Mock(number=PhoneNumber.from_string('+123')), token=code)
+                twilio.make_call(device=Mock(number=PhoneNumber.from_string('+123'), extension=None), token=code)
                 client.return_value.calls.create.assert_called_with(
                     from_='+456', to='+123', method='GET', timeout=15,
                     url='http://testserver/twilio/inbound/two_factor/%s/?locale=en-gb' % code)
 
             client.return_value.calls.create.reset_mock()
             with translation.override('en-gb'):
-                twilio.make_call(device=Mock(number=PhoneNumber.from_string('+123')), token=code)
+                twilio.make_call(device=Mock(number=PhoneNumber.from_string('+123'), extension=None), token=code)
                 client.return_value.calls.create.assert_called_with(
                     from_='+456', to='+123', method='GET', timeout=15,
                     url='http://testserver/twilio/inbound/two_factor/%s/?locale=en-gb' % code)
@@ -101,7 +101,7 @@ class TwilioGatewayTest(TestCase):
         with self.assertRaises(NotImplementedError):
             twilio = Twilio()
             with translation.override('ar'):
-                twilio.make_call(device=Mock(number='+123'), token='654321')
+                twilio.make_call(device=Mock(number='+123', extension=None), token='654321')
 
 
 class FakeGatewayTest(TestCase):
@@ -110,10 +110,10 @@ class FakeGatewayTest(TestCase):
         fake = Fake()
 
         for code in ['654321', '87654321']:
-            fake.make_call(device=Mock(number=PhoneNumber.from_string('+123')), token=code)
+            fake.make_call(device=Mock(number=PhoneNumber.from_string('+123'), extension=None), token=code)
             logger.info.assert_called_with(
                 'Fake call to %s: "Your token is: %s"', '+123', code)
 
-            fake.send_sms(device=Mock(number=PhoneNumber.from_string('+123')), token=code)
+            fake.send_sms(device=Mock(number=PhoneNumber.from_string('+123'), extension=None), token=code)
             logger.info.assert_called_with(
                 'Fake SMS to %s: "Your token is: %s"', '+123', code)

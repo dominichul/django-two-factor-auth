@@ -9,6 +9,7 @@ from django.utils.translation import ugettext_lazy as _
 from django_otp.models import Device
 from django_otp.oath import totp
 from django_otp.util import hex_validator, random_hex
+from django.core.validators import RegexValidator
 from phonenumber_field.modelfields import PhoneNumberField
 
 from .gateways import make_call, send_sms
@@ -25,6 +26,8 @@ PHONE_METHODS = (
     ('call', _('Phone Call')),
     ('sms', _('Text Message')),
 )
+
+ext_validator = RegexValidator(r'^[0-9]{0,4}$', "Extension must be blank or up to 4 numeric values")
 
 
 def get_available_phone_methods():
@@ -55,6 +58,10 @@ def key_validator(*args, **kwargs):
     return hex_validator()(*args, **kwargs)
 
 
+def has_extensions_enabled():
+    return getattr(settings, 'TWO_FACTOR_EXTENSION')
+
+
 class PhoneDevice(Device):
     """
     Model with phone number and token seed linked to a user.
@@ -63,6 +70,8 @@ class PhoneDevice(Device):
         app_label = 'two_factor'
 
     number = PhoneNumberField()
+    extension = models.CharField(max_length=4, validators=[ext_validator],
+                                 blank=True, verbose_name=_('extension'))
     key = models.CharField(max_length=40,
                            validators=[key_validator],
                            default=random_hex,
@@ -71,8 +80,9 @@ class PhoneDevice(Device):
                               verbose_name=_('method'))
 
     def __repr__(self):
-        return '<PhoneDevice(number={!r}, method={!r}>'.format(
+        return '<PhoneDevice(number={!r}, extension={!r} ,method={!r}>'.format(
             self.number,
+            self.extension,
             self.method,
         )
 

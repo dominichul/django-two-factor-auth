@@ -28,7 +28,10 @@ class Fake(object):
     """
     @staticmethod
     def make_call(device, token):
-        logger.info('Fake call to %s: "Your token is: %s"', device.number.as_e164, token)
+        if device.extension:
+            logger.info('Fake call to %s ext. %s: "Your token is: %s', device.number.as_e164, device.extension, token)
+        else:
+            logger.info('Fake call to %s: "Your token is: %s"', device.number.as_e164, token)
 
     @staticmethod
     def send_sms(device, token):

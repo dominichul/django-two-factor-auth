@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from phonenumber_field.phonenumber import to_python
+from django.core.validators import RegexValidator
 
 
 def validate_international_phonenumber(value):
@@ -13,3 +14,5 @@ def validate_international_phonenumber(value):
 validate_international_phonenumber.message = \
     _('Please enter a valid phone number, including your country code '
       'starting with + or 00.')
+
+validate_extension = RegexValidator(r'^[0-9]{0,4}$', 'Extension must be left blank or consist of 1-4 numeric values')
